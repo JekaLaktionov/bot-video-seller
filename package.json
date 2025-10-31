@@ -4,7 +4,7 @@
   "description": "",
   "main": "botVideo.ts",
   "scripts": {
-    "start": "npx ts-node botVideo.ts",
+    "start": "node -r ts-node/register botVideo.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
