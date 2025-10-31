@@ -1,0 +1,10 @@
+const url = 'https://api.etherscan.io/v2/api?apikey=EHU6Y3QI4KM1RD4KS8XXAYEJ8F8PRI6YAQ&chainid=11155111&module=account&action=tokentx&address=0xDC5a37C1147304a62d5adbB5664be00a9A0DEe6e&tag=latest&contractaddress=0xD1BeA5856778bA112701f6B87Fcd2101e689035c&startblock=0&endblock=9999999999&page=1&offset=1&sort=desc';
+const options = {method: 'GET', body: undefined};
+
+try {
+  const response = await fetch(url, options);
+  const data = await response.json();
+  console.log(data);
+} catch (error) {
+  console.error(error);
+}
