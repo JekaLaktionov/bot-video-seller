@@ -4,7 +4,7 @@
   "description": "",
   "main": "botVideo.ts",
   "scripts": {
-    "start": "node --loader ts-node/esm botVideo.ts",
+    "start": "ts-node botVideo.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -13,6 +13,7 @@
     "dotenv": "^17.2.3",
     "ethers": "^6.15.0",
     "grammy": "^1.38.3",
+    "ts-node": "^10.9.2",
     "node-fetch": "^3.3.2",
     "node-telegram-bot-api": "^0.66.0"
   },
