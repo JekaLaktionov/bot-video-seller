@@ -2,8 +2,9 @@
   "name": "chain_watcher",
   "version": "1.0.0",
   "description": "",
-  "main": "bot.ts",
+  "main": "botVideo.ts",
   "scripts": {
+    "start": "ts-node botVideo.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -16,6 +17,8 @@
     "node-telegram-bot-api": "^0.66.0"
   },
   "devDependencies": {
-    "@types/node-telegram-bot-api": "^0.64.11"
+    "@types/node-telegram-bot-api": "^0.64.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }
