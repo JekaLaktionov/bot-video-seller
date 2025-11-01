@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 import {Bot, GrammyError, HttpError, Keyboard} from 'grammy';
 import dotenv from 'dotenv';
 dotenv.config();
-
+import express from "express";
 
 // Как сделать бота 1. По кнопке старт приветствие и адресс на который кинуть
 // сабжи 2. Нажимает оплатил и идёт проверка последней транзакции на (
@@ -17,7 +17,7 @@ const url = `https://api.etherscan.io/v2/api?apikey=${ETHERSCAN_API_KEY}&chainid
 const options = {method: 'GET', body: undefined};
 const bot = new Bot(process.env.TELEGRAM_TOKEN!);
 const video:string=process.env.SELLIG_VIDEO!;
-
+let intervalId: NodeJS.Timeout | null = null;
  // @ chatId => counter in function "paid"
 let  antiSpam = new Map<number,number>(); // for detecting spamers
 
@@ -93,7 +93,10 @@ bot.hears("/paid", async (ctx) =>{
   { parse_mode: "Markdown" })
 }} );
 
+
+
 async function checkTrans() {
+  let intervalId = setInterval(checkTrans,1 * 30 * 1000);
 try {
   const response = await fetch(url, options);
   const data:any = await response.json();
@@ -145,7 +148,6 @@ bot.catch((err)=>{
          }
 })
 
-let intervalId = setInterval(checkTrans,1 * 30 * 1000);
 
 setTimeout(async () => {
   const message = "⏹❌ Время оплаты вышло.\nПерезапустите бота и попробуйте снова!\nВозникли неполадки? Пишите мне сюда — @Tg";
@@ -156,9 +158,35 @@ setTimeout(async () => {
   } catch (err) {
     console.error('❌ Ошибка при отправке сообщения:', err);
   }
-
-  clearInterval(intervalId);
+  if (intervalId !== null) {
+  clearInterval(intervalId);}
   console.log('⏹ Мониторинг остановлен.');
 }, 6 * 60 * 1000);
 
-bot.start();
+
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.get("/", (req, res) => res.send("Bot is running"));
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+
+
+
+
+bot.start({
+  onStart: () => console.log('Bot started with long polling')
+});
+
+// from ts to js
+//npm install
+//npx tsc
+//ls dist
+
+
+
+//npm install npm run build
+//node dist/botVideo.js
