@@ -4,6 +4,7 @@ import {Bot, GrammyError, HttpError, Keyboard} from 'grammy';
 import dotenv from 'dotenv';
 dotenv.config();
 import express from "express";
+import { toNumber } from 'ethers';
 
 // Как сделать бота 1. По кнопке старт приветствие и адресс на который кинуть
 // сабжи 2. Нажимает оплатил и идёт проверка последней транзакции на (
@@ -17,7 +18,10 @@ const url = `https://api.etherscan.io/v2/api?apikey=${ETHERSCAN_API_KEY}&chainid
 const options = {method: 'GET', body: undefined};
 const bot = new Bot(process.env.TELEGRAM_TOKEN!);
 const video:string=process.env.SELLIG_VIDEO!;
+
 let intervalId: NodeJS.Timeout | null = null;
+let timeoutId: NodeJS.Timeout | null = null;
+
  // @ chatId => counter in function "paid"
 let  antiSpam = new Map<number,number>(); // for detecting spamers
 
@@ -33,9 +37,8 @@ interface TokenTx {
 
 let lastTxHash:string;
 
-const costCons:number=1; //price
+const costCons:number=toNumber(process.env.PRICE!); //price
 
-const hashBase = new Map<string,boolean>();
 const timeGap:number= 300;
 let chatId:number;
 
@@ -59,7 +62,7 @@ bot.command("start", async (ctx) => {
   const board = new Keyboard().text("/paid").resized();
 
   await ctx.reply(
-    `\🎥 Здравствуйте \n\n Видео про стратегию заработка уже готово и ожидает только оплаты \n\n Сеть ARBITRUM \🔥 USDT ${costCons}  \n\n Адресс для оплаты  \`${WALLET}\` \n\n После оплаты на адресс нажмите кнопку paid внизу`,
+    `\🎥 Здравствуйте \n\n Видео про стратегию заработка уже готово и ожидает только оплаты \n\n Сеть ARBITRUM \🔥 USDT ➖ ${costCons}  \n\n Адресс для оплаты  \`${WALLET}\` \n\n После оплаты на адресс нажмите кнопку paid внизу`,
     {
       parse_mode: "MarkdownV2",
       reply_markup: board
@@ -83,11 +86,52 @@ bot.hears("/paid", async (ctx) =>{
  let count = (antiSpam.get(chatId)?? 0)+1; //anti-spam if
  antiSpam.set(chatId, count);
     if (count > 12) {
-      await ctx.reply ("⛔ Обнаружен спам, обратитсь к админу за разбаном",
+      await ctx.reply ("⛔ Обнаружен спам, обратитeсь к админу за разбаном",
   { parse_mode: "Markdown" })
     return
-  } else {  //normal logic
-  checkTrans();
+  } else {        //normal logic
+    
+
+        if (intervalId) {
+    clearInterval(intervalId);
+    console.log("♻️ Старый интервал очищен");
+  }
+    
+    intervalId = setInterval(async () => {
+  try {
+    await checkTrans();
+    console.log(intervalId);
+  } catch (err) {
+    console.error("⚠️ Ошибка внутри checkTrans:", err);
+  }
+}, 60 * 1000);
+
+  try {
+    await checkTrans();
+  } catch (err) {
+    console.error("⚠️ Ошибка при начальном вызове checkTrans:", err);
+  }
+
+
+ timeoutId = setTimeout(async () => {
+  const message = "⏹❌ Время оплаты вышло.\nПерезапустите бота и попробуйте снова!\nВозникли неполадки? Пишите мне сюда — @Tg";
+
+  try {
+    await bot.api.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+    console.log('✅ Сообщение об окончании отправлено.');
+  } catch (err) {
+    console.error('❌ Ошибка при отправке сообщения:', err);
+  }
+if (intervalId) {
+  clearInterval(intervalId);
+  intervalId = null;
+}
+if (timeoutId) {
+  clearTimeout(timeoutId);
+  timeoutId = null;
+}
+  console.log('⏹ Мониторинг остановлен.');
+}, 5 * 60 * 1000);
   await ctx.reply(
     "💸 После оплаты **отправьте одним сообщением** ваш `tx.hash`.\n\n⏳ *Подтверждение может занять пару минут.*",
   { parse_mode: "Markdown" })
@@ -96,21 +140,20 @@ bot.hears("/paid", async (ctx) =>{
 
 
 async function checkTrans() {
-  let intervalId = setInterval(checkTrans,1 * 30 * 1000);
+  
 try {
   const response = await fetch(url, options);
   const data:any = await response.json();
-  let time = Date.now();
-  
+  let time = Math.floor(Date.now()/ 1000)
+
       if (data.status === '1') {
       const tx:TokenTx = data.result[0];
       console.log( tx, tx.from, "-ОТПРАВКА", "ЦЕНА-", tx.value,"TIME -", tx.timeStamp);
       console.log( lastTxHash);
       if (tx.hash !== lastTxHash && tx.from !== WALLET && Number(tx.value) / 1e6 >= costCons && 
-        tx.timeStamp + timeGap >= time / 1000 && Number(tx.value) / 1e6 <= costCons + 3
+        time - tx.timeStamp <= timeGap && Number(tx.value) / 1e6 <= costCons + 3
       ) { 
         lastTxHash = tx.hash;
-        hashBase.set(tx.hash,true)
         const message = `
 ✅ *УСПЕШНАЯ транзакция!*
 
@@ -123,7 +166,14 @@ Hash: [${tx.hash}](https://arbiscan.io/tx/${tx.hash})
 Сумма: ${Number(tx.value) / 1e6} ${tx.tokenSymbol}
 Время: ${tx.timeStamp};
         `;
-        clearInterval(intervalId);
+                if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
         await bot.api.sendMessage(chatId, message, { parse_mode: 'Markdown' });
         console.log('✅ Отправлено в Telegram');
       }
@@ -135,6 +185,19 @@ Hash: [${tx.hash}](https://arbiscan.io/tx/${tx.hash})
   
 }}
 
+
+bot.command("debanUeban", async (ctx) => {  //hidden command for unban user by ID
+    const parts = ctx.message!.text.split(" ");
+  const targetId = Number(parts[1]);
+  antiSpam.set(targetId, 0);
+  await ctx.reply(
+    `Юзер ➖ \`${targetId}\` разбанен `,
+    {
+      parse_mode: "MarkdownV2",
+      
+    }
+  );
+});
 
 bot.catch((err)=>{
     const ctx = err.ctx;
@@ -149,19 +212,7 @@ bot.catch((err)=>{
 })
 
 
-setTimeout(async () => {
-  const message = "⏹❌ Время оплаты вышло.\nПерезапустите бота и попробуйте снова!\nВозникли неполадки? Пишите мне сюда — @Tg";
 
-  try {
-    await bot.api.sendMessage(chatId, message, { parse_mode: 'Markdown' });
-    console.log('✅ Сообщение об окончании отправлено.');
-  } catch (err) {
-    console.error('❌ Ошибка при отправке сообщения:', err);
-  }
-  if (intervalId !== null) {
-  clearInterval(intervalId);}
-  console.log('⏹ Мониторинг остановлен.');
-}, 6 * 60 * 1000);
 
 
 
@@ -187,6 +238,6 @@ bot.start({
 //ls dist
 
 
-
+//for deploy
 //npm install npm run build
 //node dist/botVideo.js
