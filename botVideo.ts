@@ -36,10 +36,10 @@ interface TokenTx {
 }
 
 let lastTxHash:string;
-
+let buyers:number []= [];
 const costCons:number=toNumber(process.env.PRICE!); //price
 
-const timeGap:number= 300;
+const timeGap:number= 400;
 let chatId:number;
 
 bot.api.setMyCommands([
@@ -62,7 +62,7 @@ bot.command("start", async (ctx) => {
   const board = new Keyboard().text("/paid").resized();
 
   await ctx.reply(
-    `\🎥 Здравствуйте \n\n Видео про стратегию заработка уже готово и ожидает только оплаты \n\n Сеть ARBITRUM \🔥 USDT ➖ ${costCons}  \n\n Адресс для оплаты  \`${WALLET}\` \n\n После оплаты на адресс нажмите кнопку paid внизу`,
+    `\🎥 Здравствуйте \n\n Видео про стратегию заработка уже готово и ожидает только оплаты \n\n Сеть ARBITRUM \🔥 USDT ➖ ${costCons}  \n\n Адресс для оплаты  \`${WALLET}\` \n\n ПОСЛЕ оплаты на адресс нажмите кнопку paid внизу`,
     {
       parse_mode: "MarkdownV2",
       reply_markup: board
@@ -114,7 +114,7 @@ bot.hears("/paid", async (ctx) =>{
 
 
  timeoutId = setTimeout(async () => {
-  const message = "⏹❌ Время оплаты вышло.\nПерезапустите бота и попробуйте снова!\nВозникли неполадки? Пишите мне сюда — @Tg";
+  const message = "⏹❌ Время оплаты вышло.\nПерезапустите бота и попробуйте снова!\nВозникли неполадки? Пишите сюда — @Legemetonus";
 
   try {
     await bot.api.sendMessage(chatId, message, { parse_mode: 'Markdown' });
@@ -151,7 +151,7 @@ try {
       console.log( tx, tx.from, "-ОТПРАВКА", "ЦЕНА-", tx.value,"TIME -", tx.timeStamp);
       console.log( lastTxHash);
       if (tx.hash !== lastTxHash && tx.from !== WALLET && Number(tx.value) / 1e6 >= costCons && 
-        time - tx.timeStamp <= timeGap && Number(tx.value) / 1e6 <= costCons + 3
+        time - tx.timeStamp <= timeGap && Number(tx.value) / 1e6 <= costCons + 5
       ) { 
         lastTxHash = tx.hash;
         const message = `
@@ -174,6 +174,7 @@ Hash: [${tx.hash}](https://arbiscan.io/tx/${tx.hash})
           clearTimeout(timeoutId);
           timeoutId = null;
         }
+        buyers.push(chatId);
         await bot.api.sendMessage(chatId, message, { parse_mode: 'Markdown' });
         console.log('✅ Отправлено в Telegram');
       }
@@ -198,6 +199,19 @@ bot.command("debanUeban", async (ctx) => {  //hidden command for unban user by I
     }
   );
 });
+
+
+bot.command("buyersList", async (ctx) => {  //hidden command for get buyers list  
+    
+  await ctx.reply(
+    `Все покупатели \`${buyers}\` `,
+    {
+      parse_mode: "MarkdownV2",
+      
+    }
+  );
+});
+
 
 bot.catch((err)=>{
     const ctx = err.ctx;
