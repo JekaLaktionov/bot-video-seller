@@ -150,7 +150,7 @@ try {
       const tx:TokenTx = data.result[0];
       console.log( tx, tx.from, "-ОТПРАВКА", "ЦЕНА-", tx.value,"TIME -", tx.timeStamp);
       console.log( lastTxHash);
-      if (tx.hash !== lastTxHash && tx.from !== WALLET && Number(tx.value) / 1e6 >= costCons && 
+      if (tx.hash !== lastTxHash && tx.from.toLowerCase() !== WALLET.toLowerCase()  && Number(tx.value) / 1e6 >= costCons && 
         time - tx.timeStamp <= timeGap && Number(tx.value) / 1e6 <= costCons + 5
       ) { 
         lastTxHash = tx.hash;
